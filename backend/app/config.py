@@ -44,13 +44,20 @@ class Settings:
     # payload small when hundreds of small wikis are active at once).
     max_tracked_wikis: int = int(os.getenv("MAX_TRACKED_WIKIS", "20"))
 
-    # LLM provider: "anthropic" or "none" (heuristic/template-only fallback,
-    # no network calls, no API key required). The provider interface in
-    # app/ai.py is small enough to add another backend (OpenAI, a local
-    # model, ...) without touching callers.
-    llm_provider: str = os.getenv("LLM_PROVIDER", "anthropic" if os.getenv("ANTHROPIC_API_KEY") else "none")
+    # LLM provider: "anthropic", "gemini", or "none" (heuristic/template-only
+    # fallback, no network calls, no API key required). Auto-detected from
+    # whichever API key is set (Anthropic takes priority) unless LLM_PROVIDER
+    # is set explicitly.
+    llm_provider: str = os.getenv(
+        "LLM_PROVIDER",
+        "anthropic"
+        if os.getenv("ANTHROPIC_API_KEY")
+        else ("gemini" if os.getenv("GEMINI_API_KEY") else "none"),
+    )
     anthropic_api_key: str | None = os.getenv("ANTHROPIC_API_KEY")
     anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
+    gemini_api_key: str | None = os.getenv("GEMINI_API_KEY")
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
     # Heuristic score (0-1) above which an edit is forwarded to the LLM for a
     # second-pass judgement + human-readable reason. Keeps API spend low by

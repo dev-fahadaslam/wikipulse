@@ -108,3 +108,55 @@ async def test_judge_vandalism_falls_back_on_llm_error(monkeypatch):
     event = make_event()
     result = await ai.judge_vandalism(event, [])
     assert result is None
+
+
+class _FakeGeminiResponse:
+    def __init__(self, text):
+        self.text = text
+
+
+class _FakeGeminiModels:
+    def __init__(self, text):
+        self._text = text
+
+    async def generate_content(self, **kwargs):
+        return _FakeGeminiResponse(self._text)
+
+
+class _FakeGeminiClient:
+    def __init__(self, text):
+        self.aio = type("Aio", (), {"models": _FakeGeminiModels(text)})()
+
+
+@pytest.mark.asyncio
+async def test_judge_vandalism_uses_gemini_when_enabled(monkeypatch):
+    monkeypatch.setattr(settings, "llm_provider", "gemini")
+    monkeypatch.setattr(settings, "gemini_api_key", "test-key")
+
+    reply = '```json\n{"flagged": true, "reason": "blanked the page"}\n```'
+    monkeypatch.setattr(ai, "_get_gemini_client", lambda: _FakeGeminiClient(reply))
+
+    event = make_event()
+    result = await ai.judge_vandalism(event, ["removed almost all of the page's content"])
+    assert result == {"flagged": True, "reason": "blanked the page"}
+
+
+@pytest.mark.asyncio
+async def test_pulse_summary_uses_gemini_when_enabled(monkeypatch):
+    monkeypatch.setattr(settings, "llm_provider", "gemini")
+    monkeypatch.setattr(settings, "gemini_api_key", "test-key")
+    monkeypatch.setattr(ai, "_get_gemini_client", lambda: _FakeGeminiClient("Things are happening."))
+
+    stats = {
+        "overall": {
+            "edits_last_60s": 12,
+            "top_pages": [{"wiki": "enwiki", "title": "Example", "count": 4}],
+        },
+        "wikis": [{"wiki": "enwiki", "count_recent": 10}],
+    }
+    result = await ai.generate_pulse_summary(stats)
+    assert result == {
+        "summary": "Things are happening.",
+        "source": "ai",
+        "generated_at": result["generated_at"],
+    }

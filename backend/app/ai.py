@@ -18,6 +18,7 @@ from app.models import EditEvent
 logger = logging.getLogger("wikipulse.ai")
 
 _anthropic_client = None
+_gemini_client = None
 
 
 def _get_client():
@@ -29,8 +30,64 @@ def _get_client():
     return _anthropic_client
 
 
+def _get_gemini_client():
+    global _gemini_client
+    if _gemini_client is None:
+        from google import genai as gemini_genai
+
+        _gemini_client = gemini_genai.Client(api_key=settings.gemini_api_key)
+    return _gemini_client
+
+
 def _enabled() -> bool:
-    return settings.llm_provider == "anthropic" and bool(settings.anthropic_api_key)
+    if settings.llm_provider == "anthropic":
+        return bool(settings.anthropic_api_key)
+    if settings.llm_provider == "gemini":
+        return bool(settings.gemini_api_key)
+    return False
+
+
+def _strip_code_fence(text: str) -> str:
+    """Gemini sometimes wraps JSON replies in a ```json ... ``` fence."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else text
+        if text.endswith("```"):
+            text = text.rsplit("```", 1)[0]
+    return text.strip()
+
+
+async def _complete(system: str, user_content: str, max_tokens: int) -> str:
+    """Runs one completion against whichever provider is configured."""
+    if settings.llm_provider == "gemini":
+        from google.genai import types
+
+        client = _get_gemini_client()
+        response = await client.aio.models.generate_content(
+            model=settings.gemini_model,
+            contents=user_content,
+            config=types.GenerateContentConfig(
+                system_instruction=system,
+                max_output_tokens=max_tokens,
+                # Newer Gemini models spend part of max_output_tokens on
+                # internal reasoning before writing the answer; for these
+                # short, low-latency completions that can eat the whole
+                # budget and leave a truncated reply, so it's disabled.
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
+            ),
+        )
+        return (response.text or "").strip()
+
+    client = _get_client()
+    response = await client.messages.create(
+        model=settings.anthropic_model,
+        max_tokens=max_tokens,
+        system=system,
+        messages=[{"role": "user", "content": user_content}],
+    )
+    return "".join(
+        block.text for block in response.content if block.type == "text"
+    ).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -96,17 +153,8 @@ async def generate_pulse_summary(stats: dict) -> dict:
         return _fallback_pulse(stats)
 
     try:
-        client = _get_client()
         digest = _digest_for_pulse(stats)
-        response = await client.messages.create(
-            model=settings.anthropic_model,
-            max_tokens=160,
-            system=PULSE_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": digest}],
-        )
-        text = "".join(
-            block.text for block in response.content if block.type == "text"
-        ).strip()
+        text = await _complete(PULSE_SYSTEM_PROMPT, digest, max_tokens=160)
         if not text:
             raise ValueError("empty response from model")
         return {"summary": text, "generated_at": time.time(), "source": "ai"}
@@ -154,17 +202,9 @@ async def judge_vandalism(event: EditEvent, heuristic_reasons: list[str]) -> dic
         return None
 
     try:
-        client = _get_client()
-        response = await client.messages.create(
-            model=settings.anthropic_model,
-            max_tokens=80,
-            system=VANDALISM_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": _event_digest(event, heuristic_reasons)}],
-        )
-        text = "".join(
-            block.text for block in response.content if block.type == "text"
-        ).strip()
-        parsed = json.loads(text)
+        digest = _event_digest(event, heuristic_reasons)
+        text = await _complete(VANDALISM_SYSTEM_PROMPT, digest, max_tokens=80)
+        parsed = json.loads(_strip_code_fence(text))
         return {
             "flagged": bool(parsed["flagged"]),
             "reason": str(parsed.get("reason", ""))[:200],
