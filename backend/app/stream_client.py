@@ -30,13 +30,23 @@ def extract_data_line(line: str) -> str | None:
     return None
 
 
+def _live_stream_headers() -> dict[str, str]:
+    """Wikimedia's edge rejects a generic/default User-Agent (e.g. a bare
+    "python-httpx/0.28.1") with a 403 -- it wants something identifiable,
+    per their API etiquette policy. A missing or wrong User-Agent here
+    looks exactly like a network failure (repeated reconnect/backoff) with
+    no indication that the fix is a header, not the network.
+    """
+    return {"Accept": "text/event-stream", "User-Agent": settings.stream_user_agent}
+
+
 async def _iter_live_events() -> AsyncIterator[dict]:
     """Connect to the real Wikimedia stream and yield decoded events,
     reconnecting with backoff on any connection drop (the firehose is long
     lived and *will* occasionally disconnect).
     """
     backoff = 1.0
-    headers = {"Accept": "text/event-stream"}
+    headers = _live_stream_headers()
     while True:
         try:
             async with httpx.AsyncClient(timeout=None) as client:

@@ -21,6 +21,14 @@ class Settings:
     stream_url: str = os.getenv(
         "WIKIMEDIA_STREAM_URL", "https://stream.wikimedia.org/v2/stream/recentchange"
     )
+    # Wikimedia's edge rejects requests with a generic/default User-Agent
+    # (e.g. a bare "python-httpx/0.28.1") with a 403, per their API
+    # etiquette policy -- it wants something identifiable, ideally with
+    # contact info. Override via env var with your own repo/contact.
+    stream_user_agent: str = os.getenv(
+        "WIKIMEDIA_USER_AGENT",
+        "WikiPulse/1.0 (https://github.com/wikipulse/wikipulse; take-home assignment dashboard)",
+    )
 
     # How many minutes of edit history to keep around for the "top pages"
     # window and the edits-per-minute sparkline.

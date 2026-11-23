@@ -247,6 +247,31 @@ rather than treating "tests pass" as "done."
   easy to be confidently wrong about exactly how far `?.` short-circuits,
   and a one-line interpreter check settles it for free.
 
+## 12. A `403 Forbidden` that looked like a network problem, wasn't one
+
+**What happened:** after the review pass above, running the backend for
+real against the live stream (`EVENT_SOURCE=live`, no sample data) got a
+`403 Forbidden` on every connection attempt, with the reconnect/backoff
+logic retrying forever and never recovering. The reconnect loop itself
+was working exactly as designed -- the symptom just looked like "the
+network is broken" from the logs alone.
+
+**Diagnosed, not guessed:** rather than assume a cause, checked it
+directly with `curl`: the exact same request succeeded with curl's own
+default `User-Agent` and with a descriptive custom one, but failed with
+`python-httpx/0.28.1` (httpx's default). That isolates it to Wikimedia's
+documented API etiquette policy, which rejects generic/default
+User-Agents -- not a transient outage, not a code bug in the reconnect
+logic, not a rate limit.
+
+**Fixed:** `stream_client.py` now sends an explicit, descriptive
+`User-Agent` (configurable via `WIKIMEDIA_USER_AGENT`), pulled into its
+own `_live_stream_headers()` function specifically so it has a direct
+unit test rather than only being reachable by actually hitting the real
+API in CI. Also documented in the README's troubleshooting note, since
+"endless reconnect, 403 in the logs" doesn't read as "it's a header" on
+its own.
+
 ## Chose not to use AI for
 
 - **Which optional extras to skip.** Given the ~6 hour budget, the Go

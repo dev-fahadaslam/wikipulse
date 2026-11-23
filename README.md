@@ -112,6 +112,15 @@ Set `EVENT_SOURCE=sample` (in `.env` or the environment) to replay the
 bundled `sample_events.jsonl` instead of hitting the live Wikimedia stream
 -- useful offline, in CI, or for a deterministic demo.
 
+**Troubleshooting a `403 Forbidden` / endless reconnect loop against the
+live stream:** Wikimedia's edge rejects requests whose `User-Agent` looks
+like a generic HTTP library default (a bare `python-httpx/x.y.z`), per
+their API etiquette policy -- it wants something identifiable. This looks
+exactly like a network problem (the backend just logs
+`reconnecting in Ns` forever) but isn't one; `app/stream_client.py` now
+sends a descriptive `User-Agent` (overridable via `WIKIMEDIA_USER_AGENT`
+in `.env`) specifically to avoid this.
+
 ### Frontend
 
 ```bash

@@ -4,6 +4,18 @@ import json
 import pytest
 
 from app import stream_client
+from app.config import settings
+
+
+def test_live_stream_headers_include_a_non_generic_user_agent():
+    # Regression: Wikimedia's edge 403s a generic/default User-Agent (a
+    # bare "python-httpx/x.y.z"). Without this header the symptom looks
+    # exactly like a network failure (endless reconnect/backoff), so this
+    # pins down that the header is actually set and isn't httpx's default.
+    headers = stream_client._live_stream_headers()
+    assert headers["Accept"] == "text/event-stream"
+    assert headers["User-Agent"] == settings.stream_user_agent
+    assert "python-httpx" not in headers["User-Agent"]
 
 
 def test_extract_data_line_returns_payload():
