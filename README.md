@@ -186,6 +186,45 @@ cd frontend && npm test
 
 See `e2e/README.md` for the optional Playwright end-to-end test.
 
+## Deploying (backend on Render, frontend on Vercel)
+
+There's a chicken-and-egg step here: each side needs the other's URL, so
+deploy once, then fill in the cross-reference env var on each and redeploy.
+
+### Backend -> Render
+
+1. In the Render dashboard: **New -> Blueprint**, point it at this repo. It
+   picks up `render.yaml` at the repo root (a Python web service rooted at
+   `backend/`, started with `uvicorn app.main:app --host 0.0.0.0 --port
+   $PORT`, health-checked at `/health`).
+2. Render will prompt for the env vars marked `sync: false` in
+   `render.yaml`: `LLM_PROVIDER` + one of `ANTHROPIC_API_KEY` /
+   `GEMINI_API_KEY`, and `CORS_ORIGINS` (leave blank for now, set it after
+   the Vercel deploy below).
+3. Note the resulting service URL (`https://wikipulse-backend.onrender.com`
+   or similar) -- the frontend needs it as a `wss://` WebSocket URL.
+
+### Frontend -> Vercel
+
+1. **Add New -> Project**, import this repo, and set **Root Directory** to
+   `frontend` (Vercel auto-detects the Vite framework preset from there).
+2. Add an environment variable `VITE_WS_URL` =
+   `wss://<your-render-service>.onrender.com/ws` (note `wss://`, not
+   `ws://` -- Render terminates TLS, and the browser will refuse to open a
+   plaintext WebSocket from an `https://` page).
+3. Deploy, then note the resulting Vercel URL.
+
+### Closing the loop
+
+Back in the Render service's environment settings, set `CORS_ORIGINS` to
+the Vercel URL (e.g. `https://wikipulse.vercel.app`) and redeploy. Note
+that this doesn't currently restrict who can open the `/ws` connection --
+Starlette's `CORSMiddleware` only wraps HTTP requests, not the WebSocket
+scope, and `app/main.py` has no separate `Origin` check on the websocket
+route, so `CORS_ORIGINS` only governs any plain HTTP/REST endpoints (like
+`/health`). Keeping it accurate now costs nothing and matters the moment
+an HTTP endpoint that isn't meant to be public gets added.
+
 ## WebSocket message schema
 
 Every message is `{"type": ..., "data": ...}`.
