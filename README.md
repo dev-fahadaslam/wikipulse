@@ -107,6 +107,21 @@ on top:
   shows a running **edits-seen** counter for a sense of scale, independent
   of the capped/filtered view.
 
+### Day/night mode
+
+A toggle in the header (`frontend/src/components/ThemeToggle.tsx`,
+`frontend/src/hooks/useTheme.ts`) switches between a warm cream/beige day
+theme and a true beige-on-black night theme, sharing one gold accent hue
+across both. Defaults to the OS's `prefers-color-scheme` until the viewer
+picks one explicitly, then remembers that choice in `localStorage`. Every
+color in `index.css` is a CSS custom property (`--surface-1`,
+`--text-primary`, `--accent`, ...) read by component CSS -- the toggle
+only ever changes the *values* those variables resolve to
+(`:root` vs. `:root[data-theme="dark"]`), so no component needed to
+change to support it. Status colors (good/warning/critical) keep their
+semantic meaning in both modes rather than being re-hued to match the
+palette.
+
 ### Pulse summary
 
 Every `PULSE_INTERVAL_SECONDS` (45s default), the backend hands the LLM a

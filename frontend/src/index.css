@@ -1,32 +1,85 @@
+/* Day mode (default) -- a warm cream/beige surface with near-black ink. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
   /* Surfaces */
-  --page-plane: #0d0d0d;
-  --surface-1: #1a1a19;
-  --surface-2: #202020;
+  --page-plane: #efe7d6;
+  --surface-1: #fbf6ea;
+  --surface-2: #f1e8d4;
 
   /* Ink */
-  --text-primary: #f0efec;
-  --text-secondary: #c3c2b7;
-  --text-muted: #898781;
+  --text-primary: #211c14;
+  --text-secondary: #5c5342;
+  --text-muted: #8c8370;
 
   /* Chart chrome */
-  --gridline: #2c2c2a;
-  --baseline: #383835;
-  --border: rgba(255, 255, 255, 0.1);
+  --gridline: #e1d6bd;
+  --baseline: #c9bb9a;
+  --border: rgba(33, 28, 20, 0.14);
 
-  /* Accent (categorical slot 1 / sequential hue, dark step) */
-  --accent: #3987e5;
-  --accent-wash: rgba(57, 135, 229, 0.14);
+  /* Accent -- a warm gold, the one hue shared across both modes */
+  --accent: #96701f;
+  --accent-wash: rgba(150, 112, 31, 0.12);
+  --accent-ring: rgba(150, 112, 31, 0.35);
 
-  /* Status (fixed, never themed) */
-  --status-good: #0ca30c;
-  --status-warning: #fab219;
-  --status-critical: #e66767;
-  --status-critical-wash: rgba(230, 103, 103, 0.14);
+  /* Status (fixed meaning -- green/amber/red -- only tuned per surface for
+     legibility, never re-hued to match the theme) */
+  --status-good: #1f7a1f;
+  --status-good-wash: rgba(31, 122, 31, 0.14);
+  --status-good-ring: rgba(31, 122, 31, 0.4);
+  --status-warning: #8a5a00;
+  --status-critical: #a33636;
+  --status-critical-wash: rgba(163, 54, 54, 0.1);
+  --status-critical-ring: rgba(163, 54, 54, 0.35);
+  --status-critical-row: rgba(163, 54, 54, 0.035);
+  --status-critical-row-hover: rgba(163, 54, 54, 0.06);
+
+  /* Theme-aware neutral overlays (same role in both modes, opposite
+     direction: a wash that reads against a light surface vs. a dark one) */
+  --hover-wash: rgba(33, 28, 20, 0.035);
+  --shimmer-highlight: rgba(33, 28, 20, 0.06);
+  --muted-wash: rgba(140, 131, 112, 0.16);
 
   --radius: 12px;
+  --shadow-card: 0 1px 2px rgba(33, 28, 20, 0.08), 0 12px 28px -16px rgba(33, 28, 20, 0.22);
+}
+
+/* Night mode -- beige on black, picked explicitly (not just an inverted
+   light theme): a near-black page, warm dark-brown card surfaces, beige/
+   cream text, and the same gold accent stepped brighter to read on black. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --page-plane: #0b0a08;
+  --surface-1: #18150f;
+  --surface-2: #211c14;
+
+  --text-primary: #f0e6d2;
+  --text-secondary: #c7b896;
+  --text-muted: #8f8468;
+
+  --gridline: #2e2a20;
+  --baseline: #3d3728;
+  --border: rgba(240, 230, 210, 0.1);
+
+  --accent: #d9b35f;
+  --accent-wash: rgba(217, 179, 95, 0.14);
+  --accent-ring: rgba(217, 179, 95, 0.4);
+
+  --status-good: #4caf50;
+  --status-good-wash: rgba(76, 175, 80, 0.14);
+  --status-good-ring: rgba(76, 175, 80, 0.4);
+  --status-warning: #e0a930;
+  --status-critical: #e2605a;
+  --status-critical-wash: rgba(226, 96, 90, 0.14);
+  --status-critical-ring: rgba(226, 96, 90, 0.35);
+  --status-critical-row: rgba(226, 96, 90, 0.04);
+  --status-critical-row-hover: rgba(226, 96, 90, 0.07);
+
+  --hover-wash: rgba(255, 255, 255, 0.025);
+  --shimmer-highlight: rgba(255, 255, 255, 0.06);
+  --muted-wash: rgba(143, 132, 104, 0.16);
+
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px -16px rgba(0, 0, 0, 0.55);
 }
 
@@ -40,6 +93,7 @@ body {
   color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
 .app {
@@ -160,6 +214,30 @@ body {
   color: var(--text-secondary);
 }
 
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .connection-dot {
   width: 7px;
   height: 7px;
@@ -170,12 +248,12 @@ body {
 
 .connection-open {
   color: var(--status-good);
-  border-color: rgba(12, 163, 12, 0.35);
+  border-color: var(--status-good-ring);
 }
 
 .connection-open .connection-dot {
   background: var(--status-good);
-  box-shadow: 0 0 0 0 rgba(12, 163, 12, 0.5);
+  box-shadow: 0 0 0 0 var(--status-good-ring);
   animation: dot-pulse 1.8s ease-out infinite;
 }
 
@@ -186,7 +264,7 @@ body {
 
 .connection-closed {
   color: var(--status-critical);
-  border-color: rgba(230, 103, 103, 0.35);
+  border-color: var(--status-critical-ring);
 }
 
 .connection-closed .connection-dot {
@@ -195,13 +273,13 @@ body {
 
 @keyframes dot-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(12, 163, 12, 0.45);
+    box-shadow: 0 0 0 0 var(--status-good-ring);
   }
   70% {
-    box-shadow: 0 0 0 6px rgba(12, 163, 12, 0);
+    box-shadow: 0 0 0 6px transparent;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(12, 163, 12, 0);
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 
@@ -328,7 +406,7 @@ body {
   background: linear-gradient(
     90deg,
     var(--surface-2) 0%,
-    rgba(255, 255, 255, 0.06) 50%,
+    var(--shimmer-highlight) 50%,
     var(--surface-2) 100%
   );
   background-size: 200% 100%;
@@ -364,7 +442,7 @@ body {
 }
 
 .pill-fallback {
-  background: rgba(137, 135, 129, 0.16);
+  background: var(--muted-wash);
   color: var(--text-muted);
 }
 
@@ -543,7 +621,7 @@ body {
 .pause-button.paused {
   background: var(--accent-wash);
   color: var(--accent);
-  border-color: rgba(57, 135, 229, 0.35);
+  border-color: var(--accent-ring);
 }
 
 .live-feed {
@@ -599,7 +677,7 @@ tbody tr {
 }
 
 tbody tr:hover {
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--hover-wash);
 }
 
 .col-time {
@@ -649,7 +727,7 @@ a {
 }
 
 .tag-bot {
-  background: rgba(137, 135, 129, 0.16);
+  background: var(--muted-wash);
   color: var(--text-muted);
 }
 
@@ -665,9 +743,9 @@ a {
 }
 
 .row-flagged {
-  background: rgba(230, 103, 103, 0.04);
+  background: var(--status-critical-row);
 }
 
 .row-flagged:hover {
-  background: rgba(230, 103, 103, 0.07);
+  background: var(--status-critical-row-hover);
 }

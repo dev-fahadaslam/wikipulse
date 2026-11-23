@@ -3,6 +3,7 @@ import { ConnectionBadge } from "./components/ConnectionBadge";
 import { EditsPerMinuteChart } from "./components/EditsPerMinuteChart";
 import { LiveFeed } from "./components/LiveFeed";
 import { PulseSummaryPanel } from "./components/PulseSummaryPanel";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { TopPages } from "./components/TopPages";
 import { WikiFilter } from "./components/WikiFilter";
 import { selectStatsBucket } from "./store/selectors";
@@ -45,6 +46,7 @@ export function Dashboard() {
           </span>
           <WikiFilter wikis={stats?.wikis ?? []} value={wikiFilter} onChange={setWikiFilter} />
           <ConnectionBadge status={status} />
+          <ThemeToggle />
         </div>
       </header>
 

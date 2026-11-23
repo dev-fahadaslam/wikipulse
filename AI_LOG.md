@@ -301,6 +301,42 @@ counter kept incrementing in the background while the frozen feed didn't
 move, which is exactly the intended semantics and isn't something a unit
 test alone demonstrates.
 
+## 14. Day/night mode, with a specific requested palette
+
+**Asked:** add a light/dark toggle, with night mode specifically in beige
+and black (not the blue-accented dark theme already in place).
+
+**Kept:** the existing architecture made this mechanical rather than a
+rewrite -- every color in `index.css` was already a named CSS custom
+property, so adding a theme meant defining a second set of *values* for
+those same names (`:root` vs `:root[data-theme="dark"]`) rather than
+touching any component. `useTheme()` resolves OS preference vs. a stored
+explicit choice once, sets `data-theme` on `<html>`, and persists via
+`localStorage`.
+
+**Changed mid-task:** a grep for hardcoded colors after the initial token
+swap turned up about a dozen leftover `rgba(...)` literals (the
+connection-dot pulse animation, row-hover tint, shimmer highlight, a
+couple of badge backgrounds) still hardcoded to the *old* blue/dark-only
+palette. Swapping the two main token blocks alone would have left those
+spots visually broken in light mode (e.g. a white hover-highlight that's
+invisible on a light cream background) while everything else correctly
+re-themed -- an easy thing to miss by only checking the obvious
+components. Added a handful of named alpha tokens (`--hover-wash`,
+`--status-good-ring`, `--muted-wash`, ...) for those specifically, so
+`grep -c "rgba(" index.css` outside the two token blocks comes back
+empty -- nothing left hardcoded to one theme.
+
+**A real test-environment bug, not a hook bug:** the new `useTheme` hook's
+tests failed with `Cannot read properties of undefined (reading 'clear')`
+against `window.localStorage` -- not a bug in the hook, but Node 22+'s own
+experimental global `localStorage` (gated behind a CLI flag) clashing with
+jsdom's implementation under this Node/jsdom version pairing. Rather than
+chase the exact version interaction, stubbed `window.localStorage` with a
+tiny in-memory `Map`-backed fake in the test itself, which sidesteps the
+clash entirely and is arguably better test hygiene regardless (no shared
+state leaking between test files via a real global).
+
 ## Chose not to use AI for
 
 - **Which optional extras to skip.** Given the ~6 hour budget, the Go
