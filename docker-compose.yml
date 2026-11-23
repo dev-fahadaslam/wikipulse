@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - EVENT_SOURCE=${EVENT_SOURCE:-live}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_WS_URL=ws://localhost:8000/ws
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
