@@ -79,11 +79,17 @@ async def _iter_sample_events(path: str, replay_speed: float) -> AsyncIterator[d
                     continue
 
                 recorded_ts = event.get("timestamp")
+                gap = 0.0
                 if replay_speed > 0 and prev_ts is not None and isinstance(recorded_ts, (int, float)):
                     gap = max(0.0, (recorded_ts - prev_ts)) * replay_speed
-                    await asyncio.sleep(min(gap, 5.0))
                 if isinstance(recorded_ts, (int, float)):
                     prev_ts = recorded_ts
+                # Always await, even with gap=0 (replay_speed=0, "as fast as
+                # possible" mode): this is the only place this generator
+                # yields control, so without it the event loop never gets
+                # back to the periodic broadcasters, the health endpoint, or
+                # new WebSocket connections while a replay is in progress.
+                await asyncio.sleep(min(gap, 5.0))
 
                 event["timestamp"] = time.time()
                 event["_replayed"] = True

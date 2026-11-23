@@ -156,6 +156,38 @@ outgrew this later. Also deliberately kept the "filter by wiki" dropdown
 selection as local component state rather than moving it into the store --
 it's a per-view UI choice, not data shared across components.
 
+## 9. Trimming `uvicorn[standard]` silently broke the one transport this app needs
+
+**What happened:** entry 5 above describes relaxing pinned versions to
+dodge a slow from-source build. At the same time, `uvicorn[standard]` got
+swapped for plain `uvicorn` to cut the install further (dropping
+uvloop/httptools/watchfiles, which this app doesn't need for correctness).
+That reasoning missed that `[standard]` is also where uvicorn's actual
+WebSocket protocol implementation (`websockets`/`wsproto`) comes from --
+without either, Starlette's `@app.websocket("/ws")` route exists, but
+uvicorn has no way to perform the upgrade handshake. The failure mode is
+not an exception; the server starts fine, `/health` responds fine, and the
+*first* real symptom is `/ws` returning a plain HTTP 404 on connect -- for
+an app whose entire real-time feature is that one endpoint.
+
+**Caught by:** actually connecting a WebSocket client end-to-end after the
+backend's dependencies finished installing, rather than stopping at
+`pytest` passing (the test suite mocks the transport layer entirely, so it
+had no way to catch this). Fixed by adding `websockets` back as its own
+explicit dependency, with a comment explaining why it's required rather
+than optional, instead of pulling the whole `[standard]` bundle back in.
+
+**Also caught in the same pass:** `EVENT_SOURCE=sample` with
+`REPLAY_SPEED=0` ("replay as fast as possible") turned out to busy-loop the
+event loop with no `await` yield point between events, starving every
+other task -- including the signal handler needed to shut the process down
+cleanly, so `kill` on the stuck process had no effect and it had to be
+`kill -9`'d. Fixed by always awaiting `asyncio.sleep(gap)` (down to
+`sleep(0)` at full speed) between replayed events, with a regression test
+(`test_iter_sample_events_yields_control_even_at_full_speed`) that runs a
+background task alongside the generator and asserts it actually got
+scheduled.
+
 ## Chose not to use AI for
 
 - **Which optional extras to skip.** Given the ~6 hour budget, the Go

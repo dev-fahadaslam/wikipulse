@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import pytest
@@ -60,3 +61,35 @@ async def test_iter_sample_events_skips_malformed_lines(tmp_path):
     gen = stream_client._iter_sample_events(str(sample), replay_speed=0)
     event = await gen.__anext__()
     assert event["title"] == "Good"
+
+
+@pytest.mark.asyncio
+async def test_iter_sample_events_yields_control_even_at_full_speed(tmp_path):
+    # Regression test: replay_speed=0 ("as fast as possible") must still
+    # cede control to the event loop between events, or it starves every
+    # other task (the periodic broadcasters, the health endpoint, new
+    # WebSocket connections) for as long as the replay runs.
+    sample = tmp_path / "events.jsonl"
+    sample.write_text(
+        "\n".join(json.dumps({"type": "edit", "title": f"P{i}", "timestamp": i}) for i in range(5))
+        + "\n"
+    )
+
+    ticks = 0
+
+    async def background_ticker():
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0)
+            ticks += 1
+
+    ticker = asyncio.create_task(background_ticker())
+    gen = stream_client._iter_sample_events(str(sample), replay_speed=0)
+    seen = 0
+    async for _event in gen:
+        seen += 1
+        if seen == 5:
+            break
+    ticker.cancel()
+
+    assert ticks > 0

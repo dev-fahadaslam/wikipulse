@@ -1,5 +1,10 @@
 fastapi>=0.118
 uvicorn>=0.37
+# Required by uvicorn for the WebSocket protocol itself -- without it
+# `/ws` 404s on the upgrade handshake instead of connecting. Pulled in
+# separately rather than the `uvicorn[standard]` bundle (which also adds
+# uvloop/httptools/watchfiles) to keep the install lighter.
+websockets>=13
 httpx>=0.28
 pydantic>=2.11
 anthropic>=0.69
