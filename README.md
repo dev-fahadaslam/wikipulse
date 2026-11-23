@@ -232,6 +232,50 @@ returns `None`); only `edit` and `new` are dashboard-relevant.
 - Expand the e2e suite beyond the one happy-path spec (vandalism badge
   appearing, reconnect-after-drop behavior).
 
+## Glossary
+
+Terms this README and the code assume familiarity with:
+
+**Wikimedia world**
+
+- **Wikimedia** -- the non-profit that runs Wikipedia *and* several sister
+  sites. "Wikimedia" and "Wikipedia" aren't the same thing.
+- **Wiki** -- a website anyone can edit; Wikipedia is the most famous one,
+  but the word is generic (hence "filter by wiki," not "filter by
+  Wikipedia").
+- **The other Wikimedia projects referenced in this app's data:**
+  **Wiktionary** (a dictionary), **Wikidata** (a structured database of
+  facts, built for machines to read), **Wikimedia Commons** (a shared
+  media library the other projects pull images from).
+- **Wiki code** (`enwiki`, `dewiki`, `commonswiki`, ...) -- Wikimedia's own
+  short name for "which specific site." This is the literal value used
+  throughout the code and the dropdown.
+- **The recentchange stream** -- Wikimedia's public, live log of every
+  edit across every project, the instant it happens. This is the app's
+  entire data source.
+- **Bot** -- an automated account editing pages, not a human; Wikimedia
+  marks these explicitly, and the vandalism heuristic never flags them.
+- **Vandalism** -- a deliberate bad-faith edit (blanking a page, inserting
+  abuse/nonsense). What `app/vandalism.py` tries to catch.
+
+**Technical terms used in this README/codebase**
+
+- **SSE (Server-Sent Events)** -- a server keeps a connection open and
+  pushes new data as it happens, instead of the client repeatedly asking.
+  What Wikimedia's stream uses.
+- **WebSocket** -- similar (a connection that stays open and pushes
+  updates), but two-way. What *this app's own* backend uses to push data
+  to the browser.
+- **LLM (Large Language Model)** -- the technology behind Claude/GPT-style
+  models: reads text, generates text. Used for the pulse summary and the
+  vandalism second-pass judgement.
+- **Heuristic** -- a cheap, instant rule-of-thumb check (e.g. "90% of the
+  page got deleted with no edit summary"), as opposed to calling an LLM.
+  Why vandalism scoring can run on every single edit for free.
+- **CORS** -- the browser security rule that blocks a webpage from
+  talking to a server at a different address unless that server
+  explicitly allows it (`CORS_ORIGINS` in `app/config.py`).
+
 ## AI usage
 
 See `AI_LOG.md`.
