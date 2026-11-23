@@ -10,7 +10,7 @@ import { useWikiPulse } from "./store/WikiPulseContext";
 import { ALL_WIKIS } from "./types";
 
 export function Dashboard() {
-  const { status, feed, stats, pulse } = useWikiPulse();
+  const { status, feed, stats, pulse, editsSeen } = useWikiPulse();
   // Which wiki to display is a purely local UI concern (not server data),
   // so it stays as component state rather than living in the shared store.
   const [wikiFilter, setWikiFilter] = useState<string>(ALL_WIKIS);
@@ -40,6 +40,9 @@ export function Dashboard() {
           </div>
         </div>
         <div className="header-controls">
+          <span className="edits-seen" title="Edits received since this tab connected">
+            {editsSeen.toLocaleString()} edits seen
+          </span>
           <WikiFilter wikis={stats?.wikis ?? []} value={wikiFilter} onChange={setWikiFilter} />
           <ConnectionBadge status={status} />
         </div>

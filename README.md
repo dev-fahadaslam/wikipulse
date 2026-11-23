@@ -86,6 +86,27 @@ One thing that deliberately stays *out* of the store: the live feed's
 `Dashboard.tsx`. It's a per-view UI choice, not server data shared across
 components, so it doesn't belong in the central store.
 
+### Live feed: filters and pause, not pagination
+
+Wikipedia's real firehose runs to several edits *per second* across all
+wikis combined -- genuinely too fast to read, not a bug. Rather than
+paginate the live feed (page numbers make no sense for a list that's
+constantly being prepended to -- "page 2" would mean something different
+every second), it's a bounded, scrollable buffer (150 events) with filters
+on top:
+
+- **Pause/Resume** freezes the visible rows (the store keeps updating
+  underneath; resuming jumps straight to current rather than replaying a
+  backlog) -- the thing you actually need when the feed is moving faster
+  than you can read a single row.
+- **Search** (title or user, client-side, no backend round trip) and
+  **Hide bots** / **Flagged only** toggles, so "show me only the
+  interesting edits" doesn't require scanning past bot traffic (roughly a
+  third of total volume) by eye.
+- **Top pages titles link out** to the actual article, and the header
+  shows a running **edits-seen** counter for a sense of scale, independent
+  of the capped/filtered view.
+
 ### Pulse summary
 
 Every `PULSE_INTERVAL_SECONDS` (45s default), the backend hands the LLM a

@@ -272,6 +272,35 @@ API in CI. Also documented in the README's troubleshooting note, since
 "endless reconnect, 403 in the logs" doesn't read as "it's a header" on
 its own.
 
+## 13. "Should there be a filter, pagination, other stuff" -- designed from the user's seat, not a checklist
+
+**Asked:** to actually watch the live dashboard, think about what a person
+staring at it would want, and build it -- not just "add filters" as a
+literal instruction.
+
+**Kept:** a short, deliberately *not* pagination answer. Wikipedia's real
+edit rate is several per second across all wikis; a live list that's
+constantly prepended to doesn't have stable "pages" -- page 2 means
+something different every second, and clicking into it would be
+disorienting rather than useful. Went with a bounded scrollable buffer
+plus filters instead: Pause/Resume (freeze the view, the store keeps
+counting underneath), search by title/user, Hide bots, Flagged only
+(makes the vandalism feature actually visible instead of something you
+have to catch scrolling by), top-pages links out to the real article, and
+an uncapped edits-seen counter for a sense of scale.
+
+**Changed:** Pause needed a second decision -- freeze the view and silently
+catch up on Resume, vs. queue everything that arrived while paused and
+replay it. Went with catch-up: queuing would mean Resume dumps a
+potentially huge backlog of out-of-date rows, which defeats the point of
+pausing to read something *current*. Verified the actual behavior (not
+just that it typechecks) by driving a real headless Chrome session against
+the running app over the DevTools Protocol -- clicked Hide bots and Pause
+for real, screenshotted both states, and confirmed the header's edits-seen
+counter kept incrementing in the background while the frozen feed didn't
+move, which is exactly the intended semantics and isn't something a unit
+test alone demonstrates.
+
 ## Chose not to use AI for
 
 - **Which optional extras to skip.** Given the ~6 hour budget, the Go

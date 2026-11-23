@@ -36,6 +36,10 @@ class StatsAggregator:
         # key -> deque of (ts, title) [or (ts, wiki, title) for ALL_KEY],
         # used for the "top pages in the last N minutes" leaderboard.
         self._pages: dict[str, deque[tuple]] = defaultdict(deque)
+        # (wiki, title) -> most recently seen article URL, so the top-pages
+        # list can link out. A page's URL is effectively constant, so
+        # "most recent" just means "whichever edit happened to set it last".
+        self._page_urls: dict[tuple[str, str], str] = {}
 
     def record(self, event: EditEvent) -> None:
         # Pruning below only ever pops from the front of each deque, which
@@ -52,6 +56,8 @@ class StatsAggregator:
         self._prune_pages(ALL_KEY, now)
         self._pages[event.wiki].append((now, event.title))
         self._prune_pages(event.wiki, now)
+        if event.url:
+            self._page_urls[(event.wiki, event.title)] = event.url
 
     def _prune_events(self, key: str, now: float) -> None:
         dq = self._events[key]
@@ -81,12 +87,22 @@ class StatsAggregator:
                 (wiki, title) for (_ts, wiki, title) in self._pages.get(key, ())
             )
             return [
-                {"wiki": wiki, "title": title, "count": count}
+                {
+                    "wiki": wiki,
+                    "title": title,
+                    "count": count,
+                    "url": self._page_urls.get((wiki, title)),
+                }
                 for (wiki, title), count in counter.most_common(limit)
             ]
         counter = Counter(title for (_ts, title) in self._pages.get(key, ()))
         return [
-            {"wiki": key, "title": title, "count": count}
+            {
+                "wiki": key,
+                "title": title,
+                "count": count,
+                "url": self._page_urls.get((key, title)),
+            }
             for title, count in counter.most_common(limit)
         ]
 

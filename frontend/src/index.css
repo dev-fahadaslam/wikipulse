@@ -96,6 +96,12 @@ body {
   gap: 14px;
 }
 
+.edits-seen {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .wiki-filter {
   display: flex;
   align-items: center;
@@ -402,6 +408,16 @@ body {
   white-space: nowrap;
 }
 
+.top-pages .title a {
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.top-pages .title a:hover {
+  color: var(--accent);
+  border-bottom-color: currentColor;
+}
+
 .top-pages-bar-track {
   display: block;
   height: 4px;
@@ -459,6 +475,76 @@ body {
 }
 
 /* ---------- Live feed table ---------- */
+
+.live-feed-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.live-feed-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.live-feed-search {
+  flex: 1 1 180px;
+  min-width: 140px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 10px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.live-feed-search::placeholder {
+  color: var(--text-muted);
+}
+
+.live-feed-search:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.toolbar-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pause-button {
+  margin-left: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.pause-button:hover {
+  border-color: var(--accent);
+}
+
+.pause-button.paused {
+  background: var(--accent-wash);
+  color: var(--accent);
+  border-color: rgba(57, 135, 229, 0.35);
+}
 
 .live-feed {
   max-height: 480px;

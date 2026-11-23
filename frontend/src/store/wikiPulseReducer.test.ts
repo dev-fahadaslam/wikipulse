@@ -42,6 +42,7 @@ describe("wikiPulseReducer", () => {
     expect(initialWikiPulseState.feed).toEqual([]);
     expect(initialWikiPulseState.stats).toBeNull();
     expect(initialWikiPulseState.pulse).toBeNull();
+    expect(initialWikiPulseState.editsSeen).toBe(0);
   });
 
   it("updates connection status without touching other fields", () => {
@@ -75,7 +76,7 @@ describe("wikiPulseReducer", () => {
     expect(state.feed.map((e) => e.title)).toEqual(["Second", "First"]);
   });
 
-  it("caps the feed at 150 entries", () => {
+  it("caps the feed at 150 entries but keeps counting editsSeen uncapped", () => {
     let state: WikiPulseState = initialWikiPulseState;
     for (let i = 0; i < 160; i++) {
       state = wikiPulseReducer(state, {
@@ -84,6 +85,7 @@ describe("wikiPulseReducer", () => {
       });
     }
     expect(state.feed).toHaveLength(150);
+    expect(state.editsSeen).toBe(160);
   });
 
   it("replaces stats wholesale on a stats message", () => {

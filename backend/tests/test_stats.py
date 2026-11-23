@@ -4,14 +4,14 @@ from app.models import EditEvent
 from app.stats import StatsAggregator
 
 
-def make_event(id_, wiki, title, ts, bot=False, delta=10) -> EditEvent:
+def make_event(id_, wiki, title, ts, bot=False, delta=10, url=None) -> EditEvent:
     return EditEvent(
         id=id_,
         ts=ts,
         wiki=wiki,
         server_name=f"{wiki}.example.org",
         title=title,
-        url=None,
+        url=url,
         user="Someone",
         bot=bot,
         minor=False,
@@ -37,7 +37,9 @@ def test_top_pages_within_window():
 
     snapshot = agg.snapshot()
     top = snapshot["overall"]["top_pages"]
-    assert top[0] == {"wiki": "enwiki", "title": "Alpha", "count": 2}
+    assert top[0]["wiki"] == "enwiki"
+    assert top[0]["title"] == "Alpha"
+    assert top[0]["count"] == 2
     assert any(p["title"] == "Beta" and p["count"] == 1 for p in top)
 
 
@@ -99,3 +101,16 @@ def test_wikis_ranked_by_recent_volume():
     wikis = [w["wiki"] for w in snapshot["wikis"]]
     assert wikis == ["enwiki", "dewiki"]
     assert "frwiki" not in snapshot["by_wiki"]
+
+
+def test_top_pages_include_a_url_to_link_to():
+    agg = StatsAggregator()
+    now = time.time()
+    agg.record(make_event(1, "enwiki", "Alpha", now, url="https://en.wikipedia.org/wiki/Alpha"))
+    agg.record(make_event(2, "enwiki", "Alpha", now + 1, url="https://en.wikipedia.org/wiki/Alpha"))
+    agg.record(make_event(3, "enwiki", "Beta", now + 2, url=None))
+
+    snapshot = agg.snapshot()
+    top = {p["title"]: p["url"] for p in snapshot["overall"]["top_pages"]}
+    assert top["Alpha"] == "https://en.wikipedia.org/wiki/Alpha"
+    assert top["Beta"] is None

@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ALL_WIKIS, type EditEvent } from "../types";
-import { filterEventsByWiki, LiveFeed } from "./LiveFeed";
+import { applyLiveFeedTextFilters, filterEventsByWiki, LiveFeed } from "./LiveFeed";
 
 function makeEvent(overrides: Partial<EditEvent>): EditEvent {
   return {
@@ -38,6 +38,71 @@ describe("filterEventsByWiki", () => {
     const filtered = filterEventsByWiki(events, "dewiki");
     expect(filtered).toHaveLength(1);
     expect(filtered[0].wiki).toBe("dewiki");
+  });
+});
+
+describe("applyLiveFeedTextFilters", () => {
+  const events = [
+    makeEvent({ id: 1, title: "Alpha", user: "Alice", bot: false }),
+    makeEvent({ id: 2, title: "Beta Bot Run", user: "BotAccount", bot: true }),
+    makeEvent({
+      id: 3,
+      title: "Gamma",
+      user: "Bob",
+      bot: false,
+      vandalism: { flagged: true, score: 0.9, reason: "blanked", source: "heuristic" },
+    }),
+  ];
+
+  it("returns everything with no filters active", () => {
+    expect(
+      applyLiveFeedTextFilters(events, { search: "", hideBots: false, flaggedOnly: false })
+    ).toHaveLength(3);
+  });
+
+  it("hides bot edits when hideBots is set", () => {
+    const result = applyLiveFeedTextFilters(events, {
+      search: "",
+      hideBots: true,
+      flaggedOnly: false,
+    });
+    expect(result.map((e) => e.id)).toEqual([1, 3]);
+  });
+
+  it("keeps only flagged edits when flaggedOnly is set", () => {
+    const result = applyLiveFeedTextFilters(events, {
+      search: "",
+      hideBots: false,
+      flaggedOnly: true,
+    });
+    expect(result.map((e) => e.id)).toEqual([3]);
+  });
+
+  it("matches search against title or user, case-insensitively", () => {
+    const byTitle = applyLiveFeedTextFilters(events, {
+      search: "alpha",
+      hideBots: false,
+      flaggedOnly: false,
+    });
+    expect(byTitle.map((e) => e.id)).toEqual([1]);
+
+    const byUser = applyLiveFeedTextFilters(events, {
+      search: "bob",
+      hideBots: false,
+      flaggedOnly: false,
+    });
+    expect(byUser.map((e) => e.id)).toEqual([3]);
+  });
+
+  it("combines filters (AND, not OR)", () => {
+    const result = applyLiveFeedTextFilters(events, {
+      search: "bot",
+      hideBots: true,
+      flaggedOnly: false,
+    });
+    // "Beta Bot Run" matches the search term but is itself a bot edit,
+    // which hideBots should still exclude.
+    expect(result).toHaveLength(0);
   });
 });
 
@@ -87,5 +152,80 @@ describe("LiveFeed", () => {
     );
     expect(screen.queryByText("English Page")).not.toBeInTheDocument();
     expect(screen.getByText("German Page")).toBeInTheDocument();
+  });
+
+  it("filters rows live as the search box is typed", () => {
+    render(
+      <LiveFeed
+        events={[
+          makeEvent({ id: 1, title: "Mars", user: "Alice" }),
+          makeEvent({ id: 2, title: "Jupiter", user: "Bob" }),
+        ]}
+        wikiFilter={ALL_WIKIS}
+      />
+    );
+    fireEvent.change(screen.getByPlaceholderText(/search title or user/i), {
+      target: { value: "mars" },
+    });
+    expect(screen.getByText("Mars")).toBeInTheDocument();
+    expect(screen.queryByText("Jupiter")).not.toBeInTheDocument();
+  });
+
+  it("hides bot rows once 'Hide bots' is checked", () => {
+    render(
+      <LiveFeed
+        events={[
+          makeEvent({ id: 1, title: "Human Edit", bot: false }),
+          makeEvent({ id: 2, title: "Bot Edit", bot: true }),
+        ]}
+        wikiFilter={ALL_WIKIS}
+      />
+    );
+    expect(screen.getByText("Bot Edit")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Hide bots"));
+    expect(screen.queryByText("Bot Edit")).not.toBeInTheDocument();
+    expect(screen.getByText("Human Edit")).toBeInTheDocument();
+  });
+
+  it("shows only flagged rows once 'Flagged only' is checked", () => {
+    render(
+      <LiveFeed
+        events={[
+          makeEvent({ id: 1, title: "Normal Edit" }),
+          makeEvent({
+            id: 2,
+            title: "Flagged Edit",
+            vandalism: { flagged: true, score: 0.9, reason: "blanked", source: "heuristic" },
+          }),
+        ]}
+        wikiFilter={ALL_WIKIS}
+      />
+    );
+    fireEvent.click(screen.getByLabelText("Flagged only"));
+    expect(screen.queryByText("Normal Edit")).not.toBeInTheDocument();
+    expect(screen.getByText("Flagged Edit")).toBeInTheDocument();
+  });
+
+  it("distinguishes 'no edits yet' from 'filters hide everything'", () => {
+    render(<LiveFeed events={[makeEvent({ title: "Only Page" })]} wikiFilter={ALL_WIKIS} />);
+    fireEvent.click(screen.getByLabelText("Flagged only"));
+    expect(screen.getByText(/no edits match these filters/i)).toBeInTheDocument();
+  });
+
+  it("pausing freezes the view; resuming jumps to the latest events", () => {
+    const initial = [makeEvent({ id: 1, title: "Before Pause" })];
+    const { rerender } = render(<LiveFeed events={initial} wikiFilter={ALL_WIKIS} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /pause/i }));
+
+    const updated = [makeEvent({ id: 2, title: "After Pause" }), ...initial];
+    rerender(<LiveFeed events={updated} wikiFilter={ALL_WIKIS} />);
+
+    // Still paused: the row that arrived after pausing must not appear.
+    expect(screen.queryByText("After Pause")).not.toBeInTheDocument();
+    expect(screen.getByText("Before Pause")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /resume/i }));
+    expect(screen.getByText("After Pause")).toBeInTheDocument();
   });
 });

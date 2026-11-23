@@ -32,6 +32,7 @@ export interface TopPage {
   wiki: string;
   title: string;
   count: number;
+  url: string | null;
 }
 
 export interface StatsBucket {

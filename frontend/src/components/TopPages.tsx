@@ -20,7 +20,13 @@ export function TopPages({ pages, showWikiColumn }: TopPagesProps) {
               <span className="rank">{i + 1}</span>
               <span className="top-pages-main">
                 <span className="title">
-                  {p.title}
+                  {p.url ? (
+                    <a href={p.url} target="_blank" rel="noreferrer">
+                      {p.title}
+                    </a>
+                  ) : (
+                    p.title
+                  )}
                   {showWikiColumn && <span className="wiki-tag">{p.wiki}</span>}
                 </span>
                 <span className="top-pages-bar-track">

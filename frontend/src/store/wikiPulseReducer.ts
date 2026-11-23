@@ -8,6 +8,9 @@ export interface WikiPulseState {
   feed: EditEvent[];
   stats: StatsSnapshot | null;
   pulse: PulseSummary | null;
+  /** Every edit ever seen since this tab connected, uncapped (unlike
+   * `feed`, which is bounded) -- just a counter for a sense of scale. */
+  editsSeen: number;
 }
 
 export type WikiPulseAction =
@@ -19,6 +22,7 @@ export const initialWikiPulseState: WikiPulseState = {
   feed: [],
   stats: null,
   pulse: null,
+  editsSeen: 0,
 };
 
 /** Pure state transition logic, kept separate from the WebSocket's side
@@ -39,7 +43,11 @@ function applyServerMessage(state: WikiPulseState, message: ServerMessage): Wiki
     case "init":
       return { ...state, stats: message.data.stats, pulse: message.data.pulse };
     case "edit":
-      return { ...state, feed: [message.data, ...state.feed].slice(0, MAX_FEED_LENGTH) };
+      return {
+        ...state,
+        feed: [message.data, ...state.feed].slice(0, MAX_FEED_LENGTH),
+        editsSeen: state.editsSeen + 1,
+      };
     case "stats":
       return { ...state, stats: message.data };
     case "pulse":
