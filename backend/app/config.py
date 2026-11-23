@@ -51,9 +51,13 @@ class Settings:
     vandalism_llm_threshold: float = float(os.getenv("VANDALISM_LLM_THRESHOLD", "0.5"))
     vandalism_flag_threshold: float = float(os.getenv("VANDALISM_FLAG_THRESHOLD", "0.35"))
 
-    cors_origins: list[str] = os.getenv(
-        "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000"
-    ).split(",")
+    cors_origins: list[str] = [
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000"
+        ).split(",")
+        if origin.strip()
+    ]
 
 
 settings = Settings()

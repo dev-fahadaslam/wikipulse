@@ -5,6 +5,7 @@ import { LiveFeed } from "./components/LiveFeed";
 import { PulseSummaryPanel } from "./components/PulseSummaryPanel";
 import { TopPages } from "./components/TopPages";
 import { WikiFilter } from "./components/WikiFilter";
+import { selectStatsBucket } from "./store/selectors";
 import { useWikiPulse } from "./store/WikiPulseContext";
 import { ALL_WIKIS } from "./types";
 
@@ -14,8 +15,7 @@ export function Dashboard() {
   // so it stays as component state rather than living in the shared store.
   const [wikiFilter, setWikiFilter] = useState<string>(ALL_WIKIS);
 
-  const bucket =
-    wikiFilter === ALL_WIKIS ? stats?.overall : stats?.by_wiki[wikiFilter] ?? stats?.overall;
+  const bucket = selectStatsBucket(stats, wikiFilter);
 
   return (
     <div className="app">

@@ -54,6 +54,25 @@ def test_from_raw_ignores_non_edit_types():
     assert EditEvent.from_raw({"type": "categorize", "title": "X"}) is None
 
 
+def test_from_raw_tolerates_a_non_numeric_timestamp():
+    # A string timestamp previously reached `raw.get("timestamp", 0) * 1000`
+    # unguarded -- str * int is valid Python (string repetition), so this
+    # silently built a huge garbage string instead of failing fast, then
+    # blew up later at int(...) parsing it. Must degrade gracefully instead.
+    raw = {
+        "type": "edit",
+        "title": "Weird Page",
+        "wiki": "enwiki",
+        "server_name": "en.wikipedia.org",
+        "user": "Someone",
+        "timestamp": "not-a-number",
+        "length": {"old": 100, "new": 110},
+    }
+    event = EditEvent.from_raw(raw)
+    assert event is not None
+    assert event.ts == 0.0
+
+
 def test_from_raw_falls_back_to_server_name_when_wiki_is_missing():
     # sample_events.jsonl has a real recorded edit shaped exactly like this
     # (wiki: null, only server_name set) -- handled here rather than

@@ -212,6 +212,41 @@ at real Wikipedia edit rates. Confirmed the fix by rebuilding and
 re-screenshotting the same real session, not by reasoning about the CSS
 a second time.
 
+## 11. A deliberate "fix everything" review pass -- two real bugs, one false alarm
+
+**Asked:** to go back over the whole thing deliberately hunting for bugs,
+rather than treating "tests pass" as "done."
+
+**Found and fixed (real):**
+- `consume_stream()` had no `try/except` around processing a single event,
+  unlike both periodic broadcaster loops, which do. One bad event (and the
+  assignment's own sample file already has one) would kill ingestion for
+  every event after it, silently -- the task just dies with nobody
+  awaiting it. Added the same try/except/log/continue pattern the other
+  loops already use, with a regression test that fails without the fix
+  (confirmed by reverting it and watching the test fail with exactly the
+  predicted exception).
+- `ConnectionManager.broadcast` iterated `self.active` (a `set`) directly
+  across `await` points. Another client connecting or disconnecting in
+  that window mutates the same set mid-iteration, which CPython raises as
+  `RuntimeError: Set changed size during iteration`. Fixed by iterating a
+  snapshot (`list(self.active)`); verified the same way -- reverted the
+  fix, watched the exact predicted RuntimeError reproduce, re-applied it.
+
+**Found and then un-found (false alarm, corrected rather than left standing):**
+- Flagged `stats?.by_wiki[wikiFilter] ?? stats?.overall` in `Dashboard.tsx`
+  as a crash risk if `stats` were ever null (no `?.` before the index
+  access). Before shipping that claim, checked it directly in a JS
+  interpreter: optional-chaining short-circuit propagates through the
+  *rest* of a member-access chain, including a plain `[...]` that follows
+  a `?.` earlier in the same chain -- so this never actually throws. Kept
+  the refactor into a named, separately-tested `selectStatsBucket`
+  function (that part was a real readability/testability improvement
+  either way), but corrected the comment and commit message to not claim a
+  bug that verification showed didn't exist. Worth keeping in mind: it's
+  easy to be confidently wrong about exactly how far `?.` short-circuits,
+  and a one-line interpreter check settles it for free.
+
 ## Chose not to use AI for
 
 - **Which optional extras to skip.** Given the ~6 hour budget, the Go

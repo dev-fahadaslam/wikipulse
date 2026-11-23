@@ -49,16 +49,23 @@ class EditEvent(BaseModel):
         elif isinstance(length_new, int):
             delta = length_new
 
+        try:
+            ts = float(raw.get("timestamp", 0))
+        except (TypeError, ValueError):
+            # A non-numeric timestamp (seen on malformed stream entries)
+            # must not crash parsing -- fall back rather than propagate.
+            ts = 0.0
+
         wiki = raw.get("wiki") or raw.get("server_name") or "unknown"
         rc_id = raw.get("id")
         if rc_id is None:
             # Some log-ish entries lack an `id`; fall back to a value that is
             # still unique enough for our in-memory de-dup/key purposes.
-            rc_id = int(raw.get("timestamp", 0) * 1000) % (2**31)
+            rc_id = int(ts * 1000) % (2**31)
 
         return cls(
             id=rc_id,
-            ts=float(raw.get("timestamp", 0)),
+            ts=ts,
             wiki=wiki,
             server_name=raw.get("server_name", wiki),
             title=raw.get("title", "(unknown title)"),

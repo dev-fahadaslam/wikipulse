@@ -37,7 +37,12 @@ class ConnectionManager:
             return
         payload = json.dumps(message, default=str)
         dead: list[WebSocket] = []
-        for ws in self.active:
+        # Snapshot before iterating: each `await ws.send_text(...)` yields
+        # control back to the event loop, and another client connecting or
+        # disconnecting in that window would otherwise mutate `self.active`
+        # while this loop is iterating it, raising "Set changed size during
+        # iteration".
+        for ws in list(self.active):
             try:
                 await ws.send_text(payload)
             except Exception:
@@ -81,18 +86,24 @@ async def _escalate_to_llm(event: EditEvent, reasons: list[str]) -> None:
 
 async def consume_stream() -> None:
     async for raw in stream_client.iter_events():
-        event = EditEvent.from_raw(raw)
-        if event is None:
-            continue
+        try:
+            event = EditEvent.from_raw(raw)
+            if event is None:
+                continue
 
-        vandalism_info, reasons = vandalism.heuristic_assess(event)
-        event.vandalism = vandalism_info
-        stats.record(event)
+            vandalism_info, reasons = vandalism.heuristic_assess(event)
+            event.vandalism = vandalism_info
+            stats.record(event)
 
-        await manager.broadcast({"type": "edit", "data": event.model_dump()})
+            await manager.broadcast({"type": "edit", "data": event.model_dump()})
 
-        if vandalism.should_escalate_to_llm(vandalism_info.score):
-            _track(asyncio.create_task(_escalate_to_llm(event, reasons)))
+            if vandalism.should_escalate_to_llm(vandalism_info.score):
+                _track(asyncio.create_task(_escalate_to_llm(event, reasons)))
+        except Exception:
+            # One malformed/unexpected event (the real firehose, and even
+            # the assignment's own sample file, can contain surprises)
+            # must never take down ingestion for every event after it.
+            logger.exception("Failed to process one recentchange event; skipping it")
 
 
 async def broadcast_stats_periodically() -> None:
