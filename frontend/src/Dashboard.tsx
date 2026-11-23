@@ -20,7 +20,25 @@ export function Dashboard() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>WikiPulse</h1>
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9.5" stroke="currentColor" strokeWidth="1.4" opacity="0.35" />
+              <path
+                d="M4 12.5h3.4l1.6-4.5 2.6 9 2-7.5 1.4 3h4.8"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </svg>
+          </span>
+          <div>
+            <h1>WikiPulse</h1>
+            <p className="brand-subtitle">Live Wikipedia edit activity</p>
+          </div>
+        </div>
         <div className="header-controls">
           <WikiFilter wikis={stats?.wikis ?? []} value={wikiFilter} onChange={setWikiFilter} />
           <ConnectionBadge status={status} />

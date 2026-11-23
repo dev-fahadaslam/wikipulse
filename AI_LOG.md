@@ -188,6 +188,30 @@ cleanly, so `kill` on the stuck process had no effect and it had to be
 background task alongside the generator and asserts it actually got
 scheduled.
 
+## 10. A visual design pass, caught wrong by an actual screenshot, not a guess
+
+**Asked:** to take a pass at the dashboard's visual design (tokens, a
+proper hero stat, a gradient-fill line chart, a ranked bar list for top
+pages, a live-dot connection badge) -- and to actually look at it running,
+not just assume the CSS was right.
+
+**What happened:** one addition was a CSS `@keyframes` fade/slide-in on
+every `<tbody tr>`, meant to make new rows entering the live feed feel
+less abrupt. It looked reasonable as code. Driving a real headless Chrome
+against the running app (CDP screenshot, not a guess at how it'd render)
+showed the opposite of the intent: rows went progressively *more*
+transparent toward the top of the table instead of staying legible, and it
+got worse, not better, at a higher replay speed -- the opposite of
+"looks fine in rare cases."
+
+**Changed:** removed the animation outright rather than debugging the
+retrigger. A dashboard whose entire point is "data changes multiple times
+a second" is exactly the wrong place for a per-row mount animation --
+even a correctly-behaving one would be competing with itself constantly
+at real Wikipedia edit rates. Confirmed the fix by rebuilding and
+re-screenshotting the same real session, not by reasoning about the CSS
+a second time.
+
 ## Chose not to use AI for
 
 - **Which optional extras to skip.** Given the ~6 hour budget, the Go

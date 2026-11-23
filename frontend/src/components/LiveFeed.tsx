@@ -8,6 +8,22 @@ interface LiveFeedProps {
   maxRows?: number;
 }
 
+function WarningIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M8 1.5L15 14H1L8 1.5z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <path d="M8 6.2v3.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <circle cx="8" cy="11.6" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function filterEventsByWiki(events: EditEvent[], wikiFilter: string): EditEvent[] {
   if (wikiFilter === ALL_WIKIS) return events;
   return events.filter((e) => e.wiki === wikiFilter);
@@ -66,6 +82,7 @@ function LiveFeedRow({ event }: { event: EditEvent }) {
         {event.change_type === "new" && <span className="tag tag-new">new</span>}
         {flagged && (
           <span className="tag tag-vandalism" title={event.vandalism?.reason ?? undefined}>
+            <WarningIcon />
             possible vandalism
             {event.vandalism?.source === "ai" ? " (AI)" : ""}
           </span>
